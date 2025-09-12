@@ -1,4 +1,4 @@
-#David Landerman Data Journalism Project 9.10.25---
+#David Landerman Data Journalism Project Lab 1---
 title: "lab_01"
 author: "Derek Willis / Rob Wells"
 date: "2025-09-10"
@@ -57,7 +57,7 @@ arrange(desc(mean_seats))
 ```
 
 **Q2** Find out the greatest number of times any individual class has been offered in our dataset. Your result should sort to show the greatest number of classes first. If several classes are tied for the most offered, describe how many classes are ranked in the top category for offerings.
-**A2**
+**A2** There is a 145-way tie for first place at 29 times offered. See below 2 tables. The first shows all the courses in order of of how many times they were offered. Then theres a second pivot table of that table to see how many courses were offered the same frequency of times.
 
 ```{r}
 umd_course_frequency<-umd_courses %>% 
@@ -89,21 +89,36 @@ arrange(desc(number_times_offered))
 
 
 **Q3** Count the number of courses for each instructor and department. Which instructor has taught the most? HINT: To filter out blank and missing values from a column, drop_na() is your friend.
-#hypothetically two different tables one pivot table for instructor instances, and one for department
-**A3**
+**A3** Wade Jacobsen has taught the most* NOT COUNTING THE TEACHERS THAT TEACH IN GROUPS, that requires stringer split and is not included in this assignment per your instructions.
 
 ```{r}
-umd_courses %>% 
-  group_by(str_split(instructors,"; ", n=Inf)) |>
+professor_frequency<-umd_courses %>% 
+  group_by(instructors) |>
   summarise(
-    classes_professors_teach=n()
+    instructor_teaches=n()
   )|>
-arrange(desc(classes_professors_teach))
+arrange(desc(instructor_teaches))
+professor_frequency<-professor_frequency %>% drop_na()
+professor_frequency<-professor_frequency %>% filter(instructors != "Instructor: TBA")
+#let rob know the search function in the online textbook is broken, always returning no results
+#woohooo!ok I found the filter function by searching google and the not equal also came in clutch there.The combining filters thing to overwrite the data frame came from gleaning chapter 16 and a lucky guess
+professor_frequency
 ```
 
-**Q4** Given the results for Q3, what would have made it easier to find the answer? You don't have to know *how* to accomplish this; I want you to describe in words what would make the answer easier to see. How confident are you that the answer you got is the right one, and why? **A4**
+**Q4** Given the results for Q3, what would have made it easier to find the answer? You don't have to know *how* to accomplish this; I want you to describe in words what would make the answer easier to see. How confident are you that the answer you got is the right one, and why? **A4** I am not confident I got the right answer because there are teachers that teach in groups like if you Rob teach one class of data journalism and another teacher teaches another class of data journalism for the same course id your group of 2 would be counted as another instructor and not count towards your individual totals.
 
-**Q5** Take one of the questions you listed in the final question of the pre_lab and try to answer it here in code. If you don't know how to fully answer it, write what code you can and describe in words what else you would need to do. If you got an answer, is it interesting? **A5**
-
+**Q5** Take one of the questions you listed in the final question of the pre_lab and try to answer it here in code. If you don't know how to fully answer it, write what code you can and describe in words what else you would need to do. If you got an answer, is it interesting? **A5**"How many students those instructors have the opportunity to scare the bejesus out of"
 ```{r}
+professor_frequency<-umd_courses %>% 
+  group_by(instructors) |>
+  summarise(
+    instructor_teaches=n(),
+    total_seats<-sum(seats)
+  )|>
+arrange(desc(instructor_teaches))
+professor_frequency<-professor_frequency %>% drop_na()
+professor_frequency<-professor_frequency %>% filter(instructors != "Instructor: TBA")
+professor_frequency
 ```
+Well I thought that was going to be easy but I kind of screwed it up and I dont know what I did wrong. Because now it looks like the teachers are teaching more classes and thats not right. Also worth noting that when a teacher teaches an online class they are still scaring the bejesus out of students but it isnt counting towards their total because seats shows up as 0
+
