@@ -1,4 +1,4 @@
----
+---NAME: DAVID LANDERMAN
 title: "pre_lab_02.Rmd"
 author: "Derek Willis/Rob Wells
 date: "2025-09-13"
@@ -406,4 +406,4 @@ Now that you have seen how to use mutate, filtering and dates, give me three que
 
 2.  I could use the floor date to see how the number of classes changed per year
 
-3.  I could use the mutate function on the expenditure data to break down the spending by state in terms of percentage of total spent
+3.  I could use the mutate function on the expenditure data to break down the spending by state in terms of percentage of total spent*
