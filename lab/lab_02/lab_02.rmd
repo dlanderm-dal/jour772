@@ -32,7 +32,7 @@ maryland_expenses <- read_csv("data/maryland_expenses.csv")
 
 ## Answer questions
 
-**Q1.** How many departments have offered the courses with "Climate" in the title and at least one seat? Which department has offered the most? **A1.**
+**Q1.** How many departments have offered the courses with "Climate" in the title and at least one seat? Which department has offered the most? **A1.** 32 departments. Atmospheric and Oceanic Science offered the most
 
 ```{r}
 umd_courses_climate <- umd_courses |>
@@ -48,7 +48,7 @@ A1: 33
 
 **Q3** Which departments offered the most courses in the Fall 2024 term? And which departments in that term have at least one syllabus posted? Answer both of those questions and then compare the top five departments - how are they different?
 
-**A3.**
+**A3.** Dept with most Fall 2024 courses: Business and Management. Dept with most Fall 2024 classes *with at least one syllabus: Business and Management. Compare: School of Music dropped from #2 to #3 losing 104 courses because they didnt have syllabi. English completely dropped off the list.Economics wasnt even in the top 6 of the first list, then made it into the number 2 slot.
 
 ```{r}
 umd_courses_fall_dept <- umd_courses |>
@@ -61,21 +61,128 @@ umd_courses_fall_dept <- umd_courses |>
     group_by(department) |>
     summarise(classes=n()) %>% 
     arrange(desc(classes))
-
+head(umd_courses_fall_dept)
+head(umd_courses_fall_dept_syllabus)
 
 ```
 
-**Q4.** Using the Maryland campaign expenses data, change the datatype of the expenditure_date column so that it is a date and not a chr, saving the result as a new dataframe. Then create a new column for the month based on expenditure_date. Then write code that shows total amount spent each month by Wes Moore's committee (you'll need to search the data to find the exact name, and we're not looking in payee_name). Write a sentence describing the pattern of spending over time. **A4.**
+**Q4.** Using the Maryland campaign expenses data, change the datatype of the expenditure_date column so that it is a date and not a chr, saving the result as a new dataframe. Then create a new column for the month based on expenditure_date. Then write code that shows total amount spent each month by Wes Moore's committee (you'll need to search the data to find the exact name, and we're not looking in payee_name). Write a sentence describing the pattern of spending over time. **A4.**The expenditures steadily increase over time, spiking in june, declining again, and then peaking in october, which stands to reason becasue the election was in early november.
 
 ```{r}
+maryland_expenses_date <- maryland_expenses |> 
+  mutate(expenditure_date = mdy(expenditure_date)) %>% 
+  mutate(expenditure_month = floor_date(expenditure_date, "month"))
+moore_filter <- maryland_expenses_date %>% 
+  #filter(str_detect(committee_name, "Moore") & payee_type=="Candidate Committee") this must be only to other committees
+  filter(str_detect(committee_name, "Moore  Wes For Maryland"))
+totals_by_month <- moore_filter %>% 
+  group_by(expenditure_month) %>% 
+  summarise(total_amount = sum(amount)) %>% 
+  arrange(desc(expenditure_month))
+  
+  
+```
+#AI USE DISCLOSURE, I wrote my original code (wrong and methodically incomplete) and was getting bugs on basic functions. So I put it into claude to debug. I only used it to identify the errors in my code I did not look at the solutions or anything past the heading "Solutions." After I did this one prompt I stopped using it and emailed you, Rob. After the hint you gave me in your email I did not use AI at all to complete the rest of the code.
+David:
+maryland_expenses_date <- maryland_expenses |> 
+  mutate(expenditure_date_clean = mdy(expenditure_date)) 
+#%>% 
+  #mutate(expenditure_month = floor_date(expediture_date, "month"))
+#totals_by_month <- maryland_expenses_date %>% 
+  #group_by(expenditure_month) %>% 
+  #sum(amount) %>% 
+  #arrange(expenditure_month)
+Warning: There was 1 warning in mutate().
+ℹ In argument: expenditure_date_clean = mdy(expenditure_date).
+Caused by warning:
+!  18 failed to parse.
+
+Claude:
+Looking at your R code, there are a couple of issues to address:
+Main Issues:
+Date parsing failures: 18 dates failed to parse with mdy(), which expects dates in "month/day/year" format
+Typo in commented code: expediture_date should be expenditure_date
+Incorrect aggregation syntax in the commented sum() line
+
+#WHERE I STOPPED READING
+Solutions:
+First, investigate the date parsing issue:
+r
+# Check the format of your expenditure_date column
+head(maryland_expenses$expenditure_date, 20)
+table(nchar(maryland_expenses$expenditure_date), useNA = "always")
+
+# See which dates failed to parse
+maryland_expenses_date <- maryland_expenses |> 
+  mutate(expenditure_date_clean = mdy(expenditure_date))
+
+# Find the problematic dates
+failed_dates <- maryland_expenses_date |> 
+  filter(is.na(expenditure_date_clean)) |> 
+  select(expenditure_date) |> 
+  distinct()
+print(failed_dates)
+Try different date parsing approaches:
+r
+maryland_expenses_date <- maryland_expenses |> 
+  mutate(
+    expenditure_date_clean = case_when(
+      # Try mdy first
+      !is.na(mdy(expenditure_date)) ~ mdy(expenditure_date),
+      # Then try ymd
+      !is.na(ymd(expenditure_date)) ~ ymd(expenditure_date),
+      # Then try dmy
+      !is.na(dmy(expenditure_date)) ~ dmy(expenditure_date),
+      TRUE ~ NA_Date_
+    )
+  )
+Fixed version of your complete code:
+r
+maryland_expenses_date <- maryland_expenses |> 
+  mutate(expenditure_date_clean = mdy(expenditure_date)) |> 
+  mutate(expenditure_month = floor_date(expenditure_date_clean, "month"))
+
+totals_by_month <- maryland_expenses_date |> 
+  group_by(expenditure_month) |> 
+  summarise(total_amount = sum(amount, na.rm = TRUE)) |> 
+  arrange(expenditure_month)
+The key changes:
+Fixed the typo: expediture_date → expenditure_date
+Changed sum(amount) to summarise(total_amount = sum(amount, na.rm = TRUE))
+Added na.rm = TRUE to handle any NA values in the amount column
+
+
+**Q5.** Using case_when(), create a column in the Maryland expenses data called `spending_location` indicating whether each record spent money in Maryland or outside Maryland. For records that are in Maryland, make the new column's value "In-state" and for all others, make it "Out of state". Then write code that shows the total amount of money spent in each category and describe the results. You can do this in one statement or break it up into two statements (saving the new column to your dataframe). **A5** Approximately 77.7 million in state and approximately 51.5 million out of state.
+
+```{r}
+maryland_expenses_with_state <- maryland_expenses |>
+  mutate(
+    in_out_state = case_when(
+        str_detect(address, " Maryland ") ~ "In-State",
+        .default = "Out of State")
+      )
+in_out_state_pivot <-maryland_expenses_with_state %>% 
+  group_by(in_out_state) %>% 
+  summarise(total_amount = sum(amount, na.rm=TRUE)) %>% 
+  arrange(desc(total_amount))
+head(in_out_state_pivot)
+  
 ```
 
-**Q5.** Using case_when(), create a column in the Maryland expenses data called `spending_location` indicating whether each record spent money in Maryland or outside Maryland. For records that are in Maryland, make the new column's value "In-state" and for all others, make it "Out of state". Then write code that shows the total amount of money spent in each category and describe the results. You can do this in one statement or break it up into two statements (saving the new column to your dataframe). **A5**
+**Q6.** Choose your own adventure: using either the UMD courses or campaign expenses data, ask and answer a question that is different than the previous ones. You can use one of the ones you provided in the pre_lab. **A6.**I'm going to compare the candidate committees expenses.
 
 ```{r}
-```
+committee_expenses<-maryland_expenses_with_state %>% 
+  group_by(committee_name) %>% 
+  summarise(
+    total_amount = sum(amount, na.rm=TRUE),
+    Number_of_donations = sum(n())) %>% 
+  arrange(desc(total_amount))
+#thats the end of my answer, the following is where I'd like to go next with the data.
 
-**Q6.** Choose your own adventure: using either the UMD courses or campaign expenses data, ask and answer a question that is different than the previous ones. You can use one of the ones you provided in the pre_lab. **A6.**
+#If I want to look into committee's that only made one payment which seems like it could be fishy, I would do this
+fishy_fish<-committee_expenses %>% 
+  filter(Number_of_donations<2 & total_amount>500)
+#then with knowledge I'd like to learn later in this class I'd like to pass that list of committees into a filter of the main data set so I can get more info on those individual donations
 
-```{r}
 ```
