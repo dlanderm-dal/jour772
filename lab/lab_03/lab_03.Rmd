@@ -115,7 +115,8 @@ A4:Funding peaked in the first year, 2009, with $14.6 million in total grant mon
 
 ```{r}
 maryland_grants_stem<-maryland_grants_loans %>% 
-  filter(str_detect(description, "Stem Cell|STEM CELL"))
+  filter(str_detect(description, "Stem Cell|STEM CELL")) %>% 
+  mutate(description = str_to_upper(description))
   maryland_grants_stem %>% 
     group_by(fiscal_year) %>% 
       summarize(total_stem_cell_research_grant_funding=sum(amount)) %>% 
