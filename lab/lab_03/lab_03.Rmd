@@ -1,0 +1,139 @@
+David Landerman---
+title: "lab_03"
+author: "Derek Willis/ Rob Wells"
+date: "2025-09-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## TASK: Load libraries
+
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+
+# Load the tidyverse
+library(tidyverse)
+library(janitor)
+# Load janitor
+```
+
+## TASK: Load data and clean up the column names
+
+Load the two datasets we worked with in the pre_lab that are in the data folder: the Maryland payments to vendors and Maryland grants and loans AND, using janitor, change the column names so that they are lower-cased and any spaces are replaced with underscores.
+
+```{r}
+# Load in the Maryland state agency payments data, making sure that it correctly sets the datatypes using all of the rows
+
+# Load in the Maryland grants and loan data
+maryland_grants_loans <- read_csv("data/State_of_Maryland_Grant_and_Loan_Data__FY2009_to_FY2022.csv", guess_max=19482)
+maryland_grants_loans<-maryland_grants_loans %>% 
+  clean_names()
+maryland_payments <- read_csv("data/State_of_Maryland_Payments_Data__FY2008_to_FY2024.csv", guess_max=369008)
+maryland_payments<-maryland_payments%>% 
+  clean_names()
+```
+
+## Answer questions
+
+Q1: You want to know how much money state agencies have paid to the Prince George's County School system, but to do that you'll need to find all of the variations of how the school system might be listed in the payments data. 
+
+Look at & search the records in the dataframe to start your search, starting with a broad search and then narrowing it down. Then write code to find rows where the vendor name contains some version of the county's school system.
+
+HINT: you should use filter() just once, and inside your filter you want to look for the variations one at a time. Think "this version OR that version."
+
+When you have found as many as possible, save the result to a new dataframe called `pg_schools`. How many records did you find?
+
+A1:50 records
+
+```{r}
+
+maryland_payments_school<-maryland_payments %>%
+#filter(str_detect(vendor_name,"PG"))
+filter(str_detect(vendor_name,
+                  "PRINCE GEORGES COUNTY PUBLIC SCHOOL|PRINCE GEORGES COUNTY SCHOOL|PRINCE GEORGES COUNTY PUBLIC SCHOOL|PRINCE GEORGE'S COUNTY PUBLIC SCHOOL|PG COUNTY PUBLIC SCHOOL"))
+maryland_payments_school %>% 
+summarize(sum(amount, na.rm=TRUE))
+
+#maryland_payments_cleaned %>% 
+ # group_by(vendor_name) %>% 
+ # summarize(vendor=n())
+  
+
+```
+
+Q2: Using that `pg_schools` dataframe, write code to calculate the total amount of payments to the Prince George's County School system for each fiscal year. Which fiscal year had the largest total amount? Are there any aspects of the results that stand out to you?
+
+A2: 2021 had the most. Missing values for 2011,2012,2016-2020,2022-2024
+
+```{r}
+maryland_payments_school %>% 
+  group_by(fiscal_year) %>% 
+  summarize(total=sum(amount)) %>%   
+arrange(desc(total))
+```
+
+Q3. This question is in two parts. 
+
+Part 1: Code: You're interested in examining the vendors paid for capital projects at the University of Maryland. Write code that does the following: 
+--Filters payments data to capital projects at the University of Maryland
+--Produce a list of vendors and the total amount they received. 
+
+Part 2: Provide a written answer, not code.
+
+Look carefully at that list - what cleaning will it require to ensure that you have only one row per vendor and zip code? 
+--Provide at least three examples of vendor names that are similar and should be combined into one. 
+--Describe how you might clean that data so that any nearly identical vendors would look identical - what would you change and how?
+
+
+A3.
+
+```{r}
+maryland_payments_capital<-maryland_payments %>% 
+  filter(str_detect(agency_name, "CAPITAL PROJECTS- UNIVERSITY OF MARYLAND")) %>% 
+  group_by(vendor_name,vendor_zip) %>% 
+  summarize(total=sum(amount,na.rm=TRUE))
+```
+
+Pt 2
+I would want to find vendors with similar names, ampersands for &, associates abbreviations etc, including truncated zipcodes (0 in front).
+Use case_when to normalize names
+
+
+
+Q4: You want to understand how much state grant money went to stem cell research projects each fiscal year. Search the data to find grants that fit that description. 
+
+Once you find which columns contain the information you want, your code should standardize the data needed to find just the grants for stem cell research in a single filter. 
+Then create a total amount of money for each fiscal year. 
+
+Write a sentence summarizing how stem cell research funding has changed over time. Be specific with the totals.
+
+A4:Funding peaked in the first year, 2009, with $14.6 million in total grant money, after that there isn't a clear trend.
+
+```{r}
+maryland_grants_stem<-maryland_grants_loans %>% 
+  filter(str_detect(description, "Stem Cell|STEM CELL"))
+  maryland_grants_stem %>% 
+    group_by(fiscal_year) %>% 
+      summarize(total_stem_cell_research_grant_funding=sum(amount)) %>% 
+    arrange(fiscal_year)
+```
+
+Q5: Using the Maryland grants and loan data, find records where the zip code is the one where the University of Maryland-College Park is located in and produce a list of grantees from that zip code, along with the total amount they received. Write a paragraph explaining how many grantees are there, what you would need to do to clean the results so that you had one record per grantee and which grantees are most interesting to you?
+
+A5:The list produced 19 grantees, however at least 9 of those represent some easily identifiable entity of the University of Maryland. In order to clean the data I would standardize all the UMD grant recipients by forming a new column that way the specificity of some of their grantee information could be retained. Then I would group_by that new column (and category because I like to be thorough, your prompt said grantees so I didn't want to mix grants and loans).
+
+```{r}
+umcp_zip<-maryland_grants_loans %>% 
+   mutate(zip5 = str_sub(zip_code, start=1L, end=5L)) %>% 
+  filter(zip5==20742)
+umcp_zip_organized_grantees<-umcp_zip %>% 
+  group_by(grantee,category) %>% 
+  summarize(total=sum(amount)) %>% 
+  arrange(desc(total))
+umcp_zip_organized_grantees
+  
+```
