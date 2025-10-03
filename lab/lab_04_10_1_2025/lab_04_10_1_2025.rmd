@@ -45,7 +45,6 @@ You'll need to load one data set, a CSV file of Maryland campaign expenditures l
 
 ```{r}
 # Load the Maryland expenditures data table
-#props to stackoverflow https://stackoverflow.com/questions/25994307/filtering-data-frame-based-on-row-number
 maryland_expenses <- read_csv("data/maryland_expenses.csv")
 maryland_expenses_clean <- maryland_expenses %>% 
   clean_names() %>% 
@@ -100,6 +99,7 @@ Then calculate the total amount of Facebook spending by each committee and prese
 
 **Q3.** Let's do some research on the top committees from question 1. Look up the top 10 spenders: if they are candidate committees, what offices were they running for? 
 
+
 ** WRITE THE ANSWER**
 **A3.**
 1. Candidate Committee: Jain Ashwani ran in the democratic primary for governor in 2022
@@ -115,19 +115,38 @@ Then calculate the total amount of Facebook spending by each committee and prese
 
 
 
-**Q4.** Given the list of top spenders and the primary results for governor (<https://elections.maryland.gov/elections/2022/primary_results/gen_results_2022_1.html>), who is missing from that list? 
-Description 1
-**A4**: YOUR CODE HERE
-#code for a
-```{r}
 
+**Q4.** Given the list of top spenders and the primary results for governor (<https://elections.maryland.gov/elections/2022/primary_results/gen_results_2022_1.html>), who is missing from that list? 
+Description: Even though he wasnt in the top 10 for facebook Wes Moore was the top spender in Media and also won the primary. Also missing are Tom Perez and Shannon Sneed, Rushern L. Baker, III and Nancy Navarro, Douglas F. Gansler and Candace Hollingsworth, Jerome M. Segal and Justinian M. Dispenza, and Ralph W. Jaffe and Mark Greben
+
+```{r}
+maryland_primary_results <- read_csv("data/maryland_winners.csv") %>% 
+  clean_names() %>% 
+  arrange(desc(total)) %>% 
+  select(name,percentage,everything())
+maryland_primary_results
+#sorry sometimes I like doing extra work. Copy pasted web results to excel, saved as csv, imported and sorted
+#note to be learned** just like the date has to be turned into a standardized date I need to learn how to turn a percentage into a number because I am guessing the percent sign makes it a string
 ```
 
-**a.** Who are the biggest recipients of media expenses by the Democratic primary winner for governor? Hint: that person has two committees, the second one with his running mate.
-** WRITE THE ANSWER**
+**A4**:
+
+**Pasted From Email**
+**a.** Write code to determine this answer: Filter for the Democratic primary winner for governor (Hint: that person has two committees, the second one with his running mate). Now determine the biggest recipients of media expenses for this Democratic primary winner for governor.
+
+**A**: YOUR CODE HERE
+```{r}
+maryland_expenses_clean_q1filter %>% 
+  filter(str_detect(committee_name,"Moore  Wes For Maryland|Moore Miller For Maryland Slate")) %>% 
+  group_by(payee_clean) %>% 
+  summarize(total=sum(amount)) %>% 
+  arrange(desc(total))
+  
+```
 
 **b.** Describe the business of the top recipient.
 ** WRITE THE ANSWER**
+So they are a "public affairs and political consulting firm." This is super interesting because they probably paid Meta yet it's not in this data set. SUPER interesting example Rob.
 
 
 
@@ -141,9 +160,158 @@ Description 1
 
 
 ```{r}
+maryland_expenses_clean_q4<-maryland_expenses_clean %>% 
+ mutate(payee_clean=n_gram_merge(payee_name)) %>% 
+ filter(expense_purpose=="Online Advertising") %>% 
+  group_by(committee_name) %>% 
+  summarize(online_total=sum(amount)) %>% 
+  arrange(desc(online_total))
+head(maryland_expenses_clean_q4)
+
 
 ```
+a. --How does this list compare to the list you already generated about top Facebook spenders? 
+      For one thing the totals are MUCH bigger by more than an order of magnitude. Second, there are more non-candidate committees at the top of this list.
+b. --Of the top 5 committees who spent the most on Facebook ads from the first list, are there any that appear to have spent *all* of their online advertising dollars on Facebook?
+1. Jain  Ashwani Friends of
+2. Franchot Anderson-Walker for Maryland Slate, but NOT Franchot  Peter Friends Of
+
+
 
 **Q6** Your editor asks you to summarize your findings about spending on Facebook by Maryland political candidates. How much do we know and what don't we know? What's the best story idea you've found here?
 
+
 **A6** ** WRITE THE ANSWER**
+I'd tell my editor that given the amount of money spent on Online advertising and the percentage of that went to facebook in the method we have previously seen I would tell my editor that our data on how much private media consultants spent on facebook (and other online platforms) is unknown to use and transitively to the public. For instance Wes Moore spent the most money on online advertising but we don't know where that actually went/how much went to Facebook because of the opacity of the private media firms. I would probably want to write a story about the disclosure laws that allow us to see the direct payment data and how the use of these media firms violates the spirit of that law though probably not its letter.
+SEE BELOW FOR ME WORKING OUT HOW TO DISPLAY THE PERCENTAGE OF ONLINE ADVERTISING SPENT ON DIRECT PAYMENTS TO FACEBOOK BROKEN DOWN BY CANDIDATE
+
+
+
+EXTRA WORK BECAUSE I'M INSANE :)
+Hold up let me work this out for my own neuroses. I did use AI and disclosed the conversation below. Since this is completely extra/not for credit would you mind letting me know if the amount of times/level to which I interacted with AI during this conversation would be frowned upon during actual credited work?
+#Me working this out: I want facebook spending percentage, to do that I need facebook total spending, to do that I need to filter by facebook then group by committee, then sum the total, or can I do this without filtering by outside of the sum command which would mess with my other data or mean that I have to make a whole bunch more data frames. Maybe I can sum inside the group by so that I can still.
+
+
+```{r}
+maryland_expenses_clean_q6<-maryland_expenses_clean %>% 
+ mutate(payee_clean=n_gram_merge(payee_name)) %>% 
+  mutate(payee_fb=
+           case_when(
+             str_detect(payee_clean, "Meta") ~ "Facebook",
+             str_detect(payee_clean, "Facebook") ~ "Facebook",)) %>% 
+  group_by(committee_name) %>% 
+  summarize(online_total=sum(amount[expense_purpose == "Online Advertising"], na.rm = TRUE),
+            total_facebook=sum(amount[payee_fb=="Facebook"], na.rm = TRUE),percentage_fb=total_facebook/online_total) %>% 
+  arrange(desc(online_total))
+head(maryland_expenses_clean_q6)
+
+
+```
+
+#I am going to load this into AI (after looking at this stack overflow https://stackoverflow.com/questions/62998416/how-to-sum-a-column-in-r-filtered-by-the-value-of-another-column-or-to-a-specif) and ask it how to do what I am trying to do.
+
+DAVID: Hi Claude I am having a problem working out how to do something in R with the tidyverse library loaded. I am going to ask you a question and provide you with code but I DO NOT WANT YOU TO FULLY WRITE MY CODE FOR ME, Ideally I want you to furnish me with a succinct example of what I am talking about. If you don't understand what I mean, succinctly ask, dont just waste tokens spitting out a ton of stuff I probably wont need.
+#Me working this out: I want facebook spending percentage but I also want total spending/non-facebook, to do that I need facebook total spending, to do that I need to filter by facebook then group by committee, then sum the total, or can I do this without filtering by outside of the sum command which would mess with my other data or mean that I have to make a whole bunch more data frames. Maybe I can sum inside the group by so that I can still.
+#```{r}
+maryland_expenses_clean_q6<-maryland_expenses_clean %>% 
+ mutate(payee_clean=n_gram_merge(payee_name)) %>% 
+  mutate(payee_fb=
+           case_when(
+             str_detect(payee_clean, "Meta") ~ "Facebook",
+             str_detect(payee_clean, "Facebook") ~ "Facebook",)) %>% 
+ filter(expense_purpose=="Online Advertising") %>% 
+  group_by(committee_name) %>% 
+  summarize(online_total=sum(amount),total_facebook(sum(filter(payee_fb=="Facebook")))) %>% 
+  arrange(desc(online_total))
+head(maryland_expenses_clean_q4)
+The thing I am not clear on is if I wrote the summarize line correctly. Or if there is a faster way to do what I am trying to do. First provide me with the correct form of how to filter inside a sum so it doesnt affect the rest of the data, then give me an example generalized, I dont want you to fully write my code for me, of if there is a more efficient way to do what I am trying to do.
+CLAUDE: Your summarize line has syntax issues. Here's how to conditionally sum within summarize:
+What you're trying to do:
+r
+summarize(
+  online_total = sum(amount),
+  total_facebook = sum(amount[payee_fb == "Facebook"], na.rm = TRUE)
+)
+The key: use amount[condition] to subset before summing, not sum(filter(...)).
+Generic example:
+r
+df %>%
+  group_by(category) %>%
+  summarize(
+    total = sum(value),
+    total_specific = sum(value[type == "A"], na.rm = TRUE)
+  )
+More efficient alternative using case_when inside sum:
+r
+summarize(
+  online_total = sum(amount),
+  total_facebook = sum(if_else(payee_fb == "Facebook", amount, 0), na.rm = TRUE)
+)
+Both work. The bracket notation [condition] is slightly cleaner for this use case.
+Does this clarify what you needed?
+  
+DAVID: please explain the purpose of the na.rm=TRUE as well as what would happen if it said FALSE and what would happen if it were omitted entirely. Succinct as possible please
+
+CLAUDE: na.rm = TRUE: Removes NAs before summing. If any values are NA, they're ignored and you get the sum of the remaining values.
+na.rm = FALSE (the default): If any value is NA, the entire result becomes NA.
+Omitted: Same as FALSE - one NA ruins everything.
+In your case: Since you're filtering to payee_fb == "Facebook", unmatched rows have NA in payee_fb. The bracket subset amount[payee_fb == "Facebook"] will include NAs, so na.rm = TRUE ensures you get a number instead of NA.
+DAVID: I put in this:
+``{r}
+maryland_expenses_clean_q6<-maryland_expenses_clean %>% 
+ mutate(payee_clean=n_gram_merge(payee_name)) %>% 
+  mutate(payee_fb=
+           case_when(
+             str_detect(payee_clean, "Meta") ~ "Facebook",
+             str_detect(payee_clean, "Facebook") ~ "Facebook",)) %>% 
+ filter(expense_purpose=="Online Advertising") %>% 
+  group_by(committee_name) %>% 
+  summarize(online_total=sum(amount),
+            total_facebook(sum[payee_fb=="Facebook"], na.rm = TRUE),percentage_fb=total_facebook/online_total) %>% 
+  arrange(desc(online_total))
+head(maryland_expenses_clean_q4)
+and got this error:
+Error in summarize():
+ℹ In argument: total_facebook(sum[payee_fb == "Facebook"], na.rm = TRUE).
+ℹ In group 1: committee_name = "32BJ United ADF".
+Caused by error in total_facebook():
+! could not find function "total_facebook"
+Run rlang::last_trace()` to see where the error occurred.
+Please give me a HINT and do not rewrite my code
+
+CLAUDE: You're using function call syntax total_facebook(...) instead of assignment syntax total_facebook = ...
+Look at how you wrote online_total=sum(amount) vs how you wrote the facebook line.
+
+DAVID: fixed it now Error: unexpected ',' in:
+"  summarize(online_total=sum(amount),
+            total_facebook=(sum[payee_fb=="Facebook"],"
+CLAUDE: You have a comma inside the parentheses where there shouldn't be one.
+Look at your bracket notation: sum[payee_fb=="Facebook"] - should sum have brackets, or should something else?
+
+DAVID: I thought you said the condition should have brackets? Was your original message wrong
+
+CLAUDE: No - I said amount[condition], not sum[condition].
+You're subsetting the data (amount), not the function (sum).
+The pattern is: sum(amount[payee_fb == "Facebook"], na.rm = TRUE)
+
+DAVID: Ok fixed that. Now one more problem I'd like your advice on, not all the payee_fb transactions are under expense purpose Online Advertising. How do I change the following code to give me the same Online advertising total in online total but also include the other purposes for total facebook, i.e. how do I restructure to conditional sum the online_total instead of filtering first by expense purpose like I did here
+#```{r}
+maryland_expenses_clean_q6<-maryland_expenses_clean %>% 
+ mutate(payee_clean=n_gram_merge(payee_name)) %>% 
+  mutate(payee_fb=
+           case_when(
+             str_detect(payee_clean, "Meta") ~ "Facebook",
+             str_detect(payee_clean, "Facebook") ~ "Facebook",)) %>% 
+ filter(expense_purpose=="Online Advertising") %>% 
+  group_by(committee_name) %>% 
+  summarize(online_total=sum(amount),
+            total_facebook=sum(amount[payee_fb=="Facebook"], na.rm = TRUE),percentage_fb=total_facebook/online_total) %>% 
+  arrange(desc(online_total))
+head(maryland_expenses_clean_q6)
+
+CLAUDE: Remove the filter() line entirely, then use the same conditional sum pattern for online_total:
+r
+online_total = sum(amount[expense_purpose == "Online Advertising"], na.rm = TRUE)
+Now both are conditional sums within the grouped data - no pre-filtering needed.
+
+
